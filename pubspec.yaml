@@ -11,9 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  firebase_core: 2.19.0
   cupertino_icons: ^1.0.8
-  cloud_firestore: 4.11.0
   table_calendar: 3.0.9
   intl: 0.18.1
   drift: 2.13.0
@@ -31,6 +29,14 @@ dev_dependencies:
   flutter_lints: ^4.0.0
   drift_dev: 2.13.0
   build_runner: 2.4.6
+  intl: ^0.18.0
+
+  # The "flutter_lints" package below contains a set of recommended lints to
+  # encourage good coding practices. The lint set provided by the package is
+  # activated in the `analysis_options.yaml` file located at the root of your
+  # package. See that file for information about deactivating specific lint
+  # rules and activating additional ones.
+
 
 flutter:
   uses-material-design: true

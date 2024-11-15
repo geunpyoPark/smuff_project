@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.smuffproject">
+    package="com.example.smuff_project">
 
     <application
         android:label="smuff_project"
