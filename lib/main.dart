@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smuff_project/firebase_options.dart';
 import 'package:smuff_project/screen/login_screen.dart';
 import 'package:smuff_project/screen/signup_screen.dart';
 import 'package:smuff_project/screen/home_screen.dart';
@@ -10,11 +11,12 @@ import 'package:smuff_project/screen/setting_screen.dart';
 
 
 void main() {
+
   runApp(
     MaterialApp(
-      //home: home_screen(),
-      //home: calendar_screen(),
-      home: login_screen(),
+      // home: home_screen(),
+      home: calendar_screen(),
+      // home: login_screen(),
       //home: signup_screen(),
       //home: setting_screen(),
       //home: camera_screen(),
