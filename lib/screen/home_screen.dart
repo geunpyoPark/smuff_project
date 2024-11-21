@@ -76,7 +76,7 @@ class _HomeScreenState extends State<home_screen> {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => settings_screen()), // SettingsScreen으로 이동
+                MaterialPageRoute(builder: (context) => Settings_Screen()), // SettingsScreen으로 이동
               );
             },
             child: Image.asset(
@@ -87,7 +87,9 @@ class _HomeScreenState extends State<home_screen> {
           ),
         ],
       ),
+      //파이어베이스에 저장되어있는 사용자 데이터 가져오기
       body: StreamBuilder<DocumentSnapshot>(
+        //로그인 확인
         stream: user != null
             ? FirebaseFirestore.instance.collection('dates').doc(user.uid).snapshots()
             : null,
@@ -151,7 +153,7 @@ class _HomeScreenState extends State<home_screen> {
                           widget.image!,
                           fit: BoxFit.cover,
                         )
-                            : Center(child: Text('이미지를 선택해주세요.')),
+                            : Center(child: Text('설정에서 이미지를 선택해주세요.')),
                       ),
                     ),
                   ),
@@ -184,7 +186,7 @@ class _HomeScreenState extends State<home_screen> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => CameraScreen()),
+                            MaterialPageRoute(builder: (context) => Camera_Screen()),
                           );
                         },
                         child: Column(
@@ -203,7 +205,7 @@ class _HomeScreenState extends State<home_screen> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => GalleryScreen()),
+                            MaterialPageRoute(builder: (context) => Gallery_Screen()),
                           );
                         },
                         child: Column(

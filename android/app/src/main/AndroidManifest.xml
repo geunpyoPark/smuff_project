@@ -1,12 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
-
         android:label="smuff_project"
         android:icon="@mipmap/ic_launcher">
 
-        <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/facebook_app_id"/> <!-- 이 줄을 여기로 이동 -->
-        <meta-data android:name="com.facebook.sdk.ClientToken" android:value="@string/facebook_client_token"/> <!-- 이 줄도 이동 -->
+        <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/facebook_app_id"/>
+        <meta-data android:name="com.facebook.sdk.ClientToken" android:value="@string/facebook_client_token"/>
 
         <activity
             android:name=".MainActivity"

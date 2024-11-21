@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smuff_project/screen/login_screen.dart';
-class signup_screen extends StatelessWidget {
+class Signup_Screen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -23,7 +23,7 @@ class signup_screen extends StatelessWidget {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => login_screen()), // SignUpScreen으로 이동
+                          MaterialPageRoute(builder: (context) => Login_Screen()), // SignUpScreen으로 이동
                         );
                       },
                     ),

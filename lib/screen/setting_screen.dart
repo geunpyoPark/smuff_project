@@ -9,12 +9,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:image_picker/image_picker.dart'; //
 import 'dart:io';
 
-class settings_screen extends StatefulWidget {
+class Settings_Screen extends StatefulWidget {
   @override
-  State<settings_screen> createState() => _SettingsScreenState();
+  State<Settings_Screen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<settings_screen> {
+class _SettingsScreenState extends State<Settings_Screen> {
   final GoogleSignIn googleSignIn = GoogleSignIn();
   DateTime firstDay = DateTime.now();
   List<DateModel> savedDates = [];
@@ -321,7 +321,7 @@ class _SettingsScreenState extends State<settings_screen> {
                     onPressed: () async {
                       await signOut(); // 로그아웃 함수 호출
                       Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (_) => login_screen()),
+                        MaterialPageRoute(builder: (_) => Login_Screen()),
                       );
                     },
                     child: Row(

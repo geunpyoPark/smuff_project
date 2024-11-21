@@ -6,7 +6,7 @@ import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smuff_project/screen/signup_screen.dart';
 
-class login_screen extends StatelessWidget {
+class Login_Screen extends StatelessWidget {
 
   // Firestore에 사용자 데이터를 저장하는 함수
   Future<void> saveUserData(String uid, String displayName) async {
@@ -273,7 +273,7 @@ class login_screen extends StatelessWidget {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => signup_screen()),
+                            MaterialPageRoute(builder: (context) => Signup_Screen()),
                           );
                         },
                         child: Text(
