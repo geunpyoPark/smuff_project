@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
-class signup_screen extends StatelessWidget {
+import 'package:smuff_project/screen/login_screen.dart';
+class Signup_Screen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -20,7 +20,12 @@ class signup_screen extends StatelessWidget {
                   children: [
                     IconButton(
                       icon: Icon(Icons.arrow_back),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => Login_Screen()), // SignUpScreen으로 이동
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -103,7 +108,10 @@ class signup_screen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8.0),
                       ),
                     ),
-                    child: Text('Sign Up'),
+                    child: Text('Sign Up',
+                      style: TextStyle(color: Colors.white),
+                    ),
+
                   ),
                 ),
                 SizedBox(height: 20),
@@ -125,22 +133,31 @@ class signup_screen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   height: 50,
-                  child: OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: Image.network(
-                      'https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg',
-                      width: 20,
-                      height: 20,
-                    ),
-                    label: Text(
-                      'Signup with Google',
-                      style: TextStyle(color: Colors.black),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.grey),
+                  child: ElevatedButton(
+                    onPressed:(){},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white, // 버튼 배경색
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8.0),
                       ),
+                    ),
+                    child: Row(
+                      children: [
+                        // 아이콘을 왼쪽으로 밀착
+                        Image.asset(
+                          'assets/img/Google Logo.png', // 구글 로고 이미지 경로
+                          width: 20, // 아이콘 크기 조정
+                          height: 20,
+                        ),
+                        SizedBox(width: 8), // 아이콘과 텍스트 사이의 간격
+                        Expanded(
+                          child: Text(
+                            'Login with Google',
+                            textAlign: TextAlign.center, // 텍스트 중앙 정렬
+                            style: TextStyle(color: Colors.black), // 텍스트 색상 변경
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -150,15 +167,27 @@ class signup_screen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   height: 50,
-                  child: ElevatedButton.icon(
-                    onPressed: () {},
-                    icon: Icon(Icons.facebook, color: Colors.white),
-                    label: Text('Login with Facebook'),
+                  child: ElevatedButton(
+                    onPressed:(){},
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Color(0xFF4267B2),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8.0),
                       ),
+                    ),
+                    child: Row(
+                      children: [
+                        // 아이콘을 왼쪽으로 밀착
+                        Icon(Icons.facebook, color: Colors.white, size: 25), // 아이콘 크기 조정
+                        SizedBox(width: 8), // 아이콘과 텍스트 사이의 간격
+                        Expanded(
+                          child: Text(
+                            'Login with Facebook',
+                            textAlign: TextAlign.center, // 텍스트 중앙 정렬
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

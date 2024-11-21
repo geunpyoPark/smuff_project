@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">smp-project</string>
+    <string name="facebook_app_id">931259728930328</string>
+    <string name="fb_login_protocol_scheme">fb931259728930328</string>
+    <string name="facebook_client_token">fe9696838c05112b8d80b76d491c973d</string>
+</resources>
