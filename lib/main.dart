@@ -7,6 +7,7 @@ import 'package:smuff_project/screen/camera_screen.dart';
 import 'package:smuff_project/screen/gallery_screen.dart';
 import 'package:smuff_project/screen/gallerydetail_screen.dart';
 import 'package:smuff_project/screen/setting_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 
 void main() {
@@ -14,11 +15,11 @@ void main() {
     MaterialApp(
       //home: home_screen(),
       //home: calendar_screen(),
-      home: login_screen(),
+      //home: login_screen(),
       //home: signup_screen(),
       //home: setting_screen(),
       //home: camera_screen(),
-      //home: gallery_screen(),
+      home: gallery_screen(),
       //home: gallerydetail_screen()
     ),
   );

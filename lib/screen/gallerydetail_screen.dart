@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 class gallerydetail_screen extends StatelessWidget {
+  final String imagePath;
+
+  gallerydetail_screen({required this.imagePath});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -19,7 +23,9 @@ class gallerydetail_screen extends StatelessWidget {
                   children: [
                     IconButton(
                       icon: Icon(Icons.arrow_back, color: Colors.black),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
                     ),
                   ],
                 ),
@@ -29,19 +35,15 @@ class gallerydetail_screen extends StatelessWidget {
               // 이미지 영역
               Expanded(
                 child: Center(
-                  child: SizedBox(
-                    width: 300,
-                    height: 200,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        'https://via.placeholder.com/300x200', // 실제 이미지 URL로 교체
-                        fit: BoxFit.cover,
+                      child: Image.asset(
+                        imagePath,
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
