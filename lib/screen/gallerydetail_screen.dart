@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
-class GalleryDetail_Screen extends StatelessWidget {
+class GalleryDetailScreen extends StatelessWidget {
+  final String imagePath; // Firebase Storage에서 가져온 이미지 URL
+
+  const GalleryDetailScreen({required this.imagePath});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -12,14 +16,16 @@ class GalleryDetail_Screen extends StatelessWidget {
             children: [
               SizedBox(height: 20),
 
-              // 상단 사이즈박스
+              // 상단 영역 (뒤로가기 버튼)
               SizedBox(
                 height: 50,
                 child: Row(
                   children: [
                     IconButton(
                       icon: Icon(Icons.arrow_back, color: Colors.black),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
                     ),
                   ],
                 ),
@@ -29,15 +35,30 @@ class GalleryDetail_Screen extends StatelessWidget {
               // 이미지 영역
               Expanded(
                 child: Center(
-                  child: SizedBox(
-                    width: 300,
-                    height: 200,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        'https://via.placeholder.com/300x200', // 실제 이미지 URL로 교체
-                        fit: BoxFit.cover,
-                      ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      imagePath, // Firebase Storage에서 가져온 URL
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Text(
+                            '이미지를 불러오는 데 실패했습니다.',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),

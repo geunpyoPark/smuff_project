@@ -6,93 +6,50 @@ import 'package:smuff_project/screen/gallery_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
+import 'package:smuff_project/model/user_model.dart';
 
-class home_screen extends StatefulWidget {
+class Home_Screen extends StatefulWidget {
   final File? image;
-  home_screen({this.image});
+  Home_Screen({this.image});
+
   @override
-  State<home_screen> createState() => _HomeScreenState();
+  State<Home_Screen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<home_screen> {
-  String displayName = '사용자 이름';
-  String loversName = '상대방 이름';
-  DateTime firstDay = DateTime.now();
-  int dday = 0;
-  bool isLoading = true;
+class _HomeScreenState extends State<Home_Screen> {
+  late Future<UserModel?> _userDataFuture;
 
   @override
   void initState() {
     super.initState();
-    fetchUserData(); // 로그인 시 사용자 데이터 가져오기
+    _userDataFuture = fetchUserData();
   }
 
-  // Firestore에 사용자 데이터 저장하는 함수
-  Future<void> saveUserData(String uid, String displayName) async {
-    final docRef = FirebaseFirestore.instance.collection('dates').doc(uid);
-    final doc = await docRef.get();
-
-    if (!doc.exists) {
-      // 문서가 없을 경우에만 초기 데이터를 저장
-      await docRef.set({
-        'displayName': displayName,
-        'loversName': '상대방 이름', // 사용자가 입력하도록 설정할 수 있음
-        'firstDay': DateTime.now(),
-        'dday': 0,
-      }, SetOptions(merge: true));
-    }
-  }
-  // 사용자 데이터 가져오기
-  Future<void> fetchUserData() async {
+  Future<UserModel?> fetchUserData() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) return null;
 
-    final doc = await FirebaseFirestore.instance.collection('dates').doc(user.uid).get();
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
     if (doc.exists) {
-      setState(() {
-        displayName = doc['displayName'] ?? '사용자 이름';
-        loversName = doc['loversName'] ?? '상대방 이름';
-        firstDay = (doc['firstDay'] as Timestamp).toDate();
-        dday = doc['dday'] ?? 0;
-        isLoading = false;
-      });
+      return UserModel.fromFirestore(doc);
     } else {
-      setState(() {
-        isLoading = false; // 데이터가 없을 경우에도 로딩 상태 해제
-      });
       print('Firestore에 사용자 데이터가 없습니다.');
+      return null;
     }
   }
+
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        actions: [
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => Settings_Screen()), // SettingsScreen으로 이동
-              );
-            },
-            child: Image.asset(
-              'assets/img/settings.png', // 설정 아이콘 이미지 경로
-              width: 24,
-              height: 24,
-            ),
-          ),
-        ],
+        leading: SizedBox(),
       ),
-      //파이어베이스에 저장되어있는 사용자 데이터 가져오기
-      body: StreamBuilder<DocumentSnapshot>(
-        //로그인 확인
-        stream: user != null
-            ? FirebaseFirestore.instance.collection('dates').doc(user.uid).snapshots()
-            : null,
+      backgroundColor: Colors.white,
+      body: FutureBuilder<UserModel?>(
+
+        future: _userDataFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -100,15 +57,11 @@ class _HomeScreenState extends State<home_screen> {
           if (snapshot.hasError) {
             return Center(child: Text('오류 발생: ${snapshot.error}'));
           }
-          if (!snapshot.hasData || !snapshot.data!.exists) {
+          if (!snapshot.hasData || snapshot.data == null) {
             return Center(child: Text('데이터 없음'));
           }
 
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-          String displayName = data['displayName'] ?? '사용자 이름';
-          String loversName = data['loversName'] ?? '상대방 이름';
-          DateTime firstDay = (data['firstDay'] as Timestamp).toDate();
-          int dday = data['dday'] ?? 0;
+          final userData = snapshot.data!;
 
           return Center(
             child: SizedBox(
@@ -117,21 +70,28 @@ class _HomeScreenState extends State<home_screen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(height: 100),
+                  SizedBox(height: 80),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16), // 좌우 패딩 20
+                    child: Divider(
+                      color: Color.fromRGBO(236, 95, 95, 1.0),
+                    ), // 구분선
+                  ),
+                  SizedBox(height: 10,),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '$displayName ❤️ $loversName',
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                          '${userData.mname} ❤️ ${userData.yname}',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'poppins'),
                           textAlign: TextAlign.left,
                         ),
                         SizedBox(height: 4),
                         Text(
-                          '${firstDay.toString().substring(0, 10)} ~ $dday일 째',
-                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                          '${userData.firstday.toString().substring(0, 10)} ~ ${userData.dday}일 째',
+                          style: TextStyle(fontSize: 24, color: Colors.black, fontFamily: 'poppins'),
                           textAlign: TextAlign.left,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -139,18 +99,25 @@ class _HomeScreenState extends State<home_screen> {
                       ],
                     ),
                   ),
-                  SizedBox(height: 20),
+                  SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16), // 좌우 패딩 20
+                    child: Divider(
+                      color: Color.fromRGBO(236, 95, 95, 1.0),
+                    ), // 구분선
+                  ),
+                  SizedBox(height: 10,),
                   // 이미지
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: SizedBox(
                       width: 400,
                       height: 300,
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: widget.image != null
-                            ? Image.file(
-                          widget.image!,
+                        child: userData.mainimg != null && userData.mainimg!.isNotEmpty
+                            ? Image.network(
+                          userData.mainimg!, // Firestore에서 가져온 이미지 URL 사용
                           fit: BoxFit.cover,
                         )
                             : Center(child: Text('설정에서 이미지를 선택해주세요.')),
@@ -159,6 +126,12 @@ class _HomeScreenState extends State<home_screen> {
                   ),
                   SizedBox(height: 20),
                   Spacer(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16), // 좌우 패딩 20
+                    child: Divider(
+                      color: Color.fromRGBO(236, 95, 95, 1.0),
+                    ), // 구분선
+                  ),
                   // 하단 아이콘 버튼들
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -174,11 +147,10 @@ class _HomeScreenState extends State<home_screen> {
                           children: [
                             Image.asset(
                               'assets/img/calendar_month.png',
-                              width: 30,
-                              height: 30,
+                              width: 24,
+                              height: 24,
                             ),
                             SizedBox(height: 4),
-                            Text('캘린더', style: TextStyle(fontSize: 12)),
                           ],
                         ),
                       ),
@@ -193,11 +165,10 @@ class _HomeScreenState extends State<home_screen> {
                           children: [
                             Image.asset(
                               'assets/img/photo_camera.png',
-                              width: 30,
-                              height: 30,
+                              width: 24,
+                              height: 24,
                             ),
                             SizedBox(height: 4),
-                            Text('카메라', style: TextStyle(fontSize: 12)),
                           ],
                         ),
                       ),
@@ -205,18 +176,35 @@ class _HomeScreenState extends State<home_screen> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => Gallery_Screen()),
+                            MaterialPageRoute(builder: (context) => GalleryScreen()),
                           );
                         },
                         child: Column(
                           children: [
                             Image.asset(
                               'assets/img/broken_image.png',
-                              width: 30,
-                              height: 30,
+                              width: 24,
+                              height: 24,
                             ),
                             SizedBox(height: 4),
-                            Text('갤러리', style: TextStyle(fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => Settings_Screen()),
+                          );
+                        },
+                        child: Column(
+                          children: [
+                            Image.asset(
+                              'assets/img/settings.png',
+                              width: 24,
+                              height: 24,
+                            ),
+                            SizedBox(height: 4),
                           ],
                         ),
                       ),

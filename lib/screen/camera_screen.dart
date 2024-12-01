@@ -3,6 +3,8 @@ import 'package:camera/camera.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart'; // 날짜 포맷을 위한 패키지
 
 class Camera_Screen extends StatefulWidget {
   const Camera_Screen({Key? key}) : super(key: key);
@@ -14,6 +16,7 @@ class Camera_Screen extends StatefulWidget {
 class _CameraScreenState extends State<Camera_Screen> {
   late CameraController _cameraController;
   late Future<void> _initializeControllerFuture;
+  final String _uid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown_user';
 
   @override
   void initState() {
@@ -39,9 +42,13 @@ class _CameraScreenState extends State<Camera_Screen> {
       // Ensure the camera is initialized
       await _initializeControllerFuture;
 
+      // Format the current date and time
+      final String formattedDate =
+      DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+
       // Get the directory to save the image temporarily
       final directory = await getApplicationDocumentsDirectory();
-      final path = '${directory.path}/${DateTime.now()}.png';
+      final path = '${directory.path}/$formattedDate.png';
 
       // Take the picture and save it to the path
       final image = await _cameraController.takePicture();
@@ -50,7 +57,7 @@ class _CameraScreenState extends State<Camera_Screen> {
       final savedImage = await File(image.path).copy(path);
 
       // Upload the image to Firebase Storage
-      await _uploadToFirebase(savedImage);
+      await _uploadToFirebase(savedImage, formattedDate);
 
       // Show a success message
       ScaffoldMessenger.of(context).showSnackBar(
@@ -61,11 +68,14 @@ class _CameraScreenState extends State<Camera_Screen> {
     }
   }
 
-  Future<void> _uploadToFirebase(File image) async {
+  Future<void> _uploadToFirebase(File image, String fileName) async {
     try {
       // Create a reference to Firebase Storage
       final storageRef = FirebaseStorage.instance.ref();
-      final imageRef = storageRef.child('camera_images/${DateTime.now().millisecondsSinceEpoch}.png');
+
+      // Use the UID as the folder name
+      final userFolderRef = storageRef.child('$_uid');
+      final imageRef = userFolderRef.child('$fileName.png'); // 파일 이름 지정
 
       // Upload the file
       await imageRef.putFile(image);

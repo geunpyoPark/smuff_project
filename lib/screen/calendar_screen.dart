@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({Key? key}) : super(key: key);
@@ -11,46 +13,69 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  DateTime _focusedDate = DateTime.now(); // 현재 포커스된 날짜
-  DateTime _selectedDate = DateTime.now(); // 선택된 날짜
-  Map<DateTime, List<String>> _events = {}; // Firestore에서 가져온 일정 저장
-  String? userId; // 로그인된 사용자 ID
+  DateTime _focusedDate = DateTime.now();
+  DateTime _selectedDate = DateTime.now();
+  String? userId;
+  List<String> imageUrls = [];
+  bool isLoadingImages = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchUserId(); // 사용자 ID 가져오기
+    _fetchUserId();
   }
 
-  // Firestore에서 일정 데이터를 스트림으로 가져오기
-  Stream<Map<DateTime, List<String>>> _getEventsStream() {
-    final docRef = FirebaseFirestore.instance.collection('dates').doc(userId);
-    return docRef.snapshots().map((snapshot) {
-      if (!snapshot.exists || snapshot.data() == null) {
-        return {};
+  // 사용자 ID 가져오기
+  Future<void> _fetchUserId() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        userId = user.uid;
+      });
+      await _loadImagesForDate(_selectedDate);
+    }
+  }
+
+  // 선택된 날짜에 해당하는 이미지만 불러오기
+  Future<void> _loadImagesForDate(DateTime date) async {
+    if (userId == null) return;
+
+    setState(() {
+      isLoadingImages = true;
+    });
+
+    final List<String> urls = [];
+    final String dateKey = DateFormat('yyyyMMdd').format(date);
+
+    try {
+      final storageRef = FirebaseStorage.instance.ref(userId!);
+      final listResult = await storageRef.listAll();
+
+      for (var item in listResult.items) {
+        if (item.name.contains(dateKey)) {
+          final url = await item.getDownloadURL();
+          urls.add(url);
+        }
       }
-      final data = snapshot.data()!;
-      final events = (data['events'] as Map<String, dynamic>?)?.map(
-            (key, value) => MapEntry(
-          DateTime.parse(key),
-          (value as List<dynamic>).cast<String>(),
-        ),
-      ) ??
-          {};
-      debugPrint("Fetched events: $events"); // 디버깅 출력
-      return events;
+    } catch (e) {
+      debugPrint("Error loading images: $e");
+    }
+
+    setState(() {
+      imageUrls = urls;
+      isLoadingImages = false;
     });
   }
 
   // Firestore에 일정 추가
   Future<void> _addEventToFirestore(String newEvent) async {
-    if (userId == null) return; // 사용자 ID가 없는 경우 반환
+    if (userId == null) return;
 
     final docRef = FirebaseFirestore.instance.collection('dates').doc(userId);
+    final dateKey = DateFormat('yyyy-MM-dd').format(_selectedDate);
 
-    final dateKey = _selectedDate.toIso8601String().split('T')[0]; // yyyy-MM-dd 형식의 키
     final snapshot = await docRef.get();
-    final currentEvents = snapshot.exists && snapshot.data()!['events'] != null
+    final currentEvents = snapshot.exists && snapshot.data() != null && snapshot.data()!['events'] != null
         ? Map<String, dynamic>.from(snapshot.data()!['events'])
         : {};
 
@@ -63,22 +88,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
       newEvent,
     ];
 
-    await docRef.set({
-      'events': updatedEvents,
-    }, SetOptions(merge: true));
-
-    debugPrint("Saved events: $updatedEvents"); // 디버깅 출력
+    try {
+      await docRef.set({'events': updatedEvents}, SetOptions(merge: true));
+      setState(() {}); // 상태 업데이트를 통해 화면 갱신
+    } catch (e) {
+      debugPrint("Error adding event: $e");
+    }
   }
 
   // Firestore에서 일정 수정
   Future<void> _editEventsInFirestore(List<String> updatedEvents) async {
-    if (userId == null) return; // 사용자 ID가 없는 경우 반환
+    if (userId == null) return;
 
     final docRef = FirebaseFirestore.instance.collection('dates').doc(userId);
+    final dateKey = DateFormat('yyyy-MM-dd').format(_selectedDate);
 
-    final dateKey = _selectedDate.toIso8601String().split('T')[0]; // yyyy-MM-dd 형식의 키
     final snapshot = await docRef.get();
-    final currentEvents = snapshot.exists && snapshot.data()!['events'] != null
+    final currentEvents = snapshot.exists && snapshot.data() != null && snapshot.data()!['events'] != null
         ? Map<String, dynamic>.from(snapshot.data()!['events'])
         : {};
 
@@ -88,9 +114,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     newEvents[dateKey] = updatedEvents;
 
-    await docRef.set({
-      'events': newEvents,
-    }, SetOptions(merge: true));
+    await docRef.set({'events': newEvents}, SetOptions(merge: true));
+    setState(() {});
   }
 
   // 일정 수정 다이얼로그
@@ -178,23 +203,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  // 로그인된 사용자 ID 가져오기
-  Future<void> _fetchUserId() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      setState(() {
-        userId = user.uid;
-      });
-    } else {
-      debugPrint("User not logged in.");
-    }
-  }
-
-  List<String> _getEventsForDay(DateTime date) {
-    final dateKey = DateTime(date.year, date.month, date.day); // 시간 정보 제거
-    return _events[dateKey] ?? [];
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -202,17 +210,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
         backgroundColor: Colors.red,
         title: const Text('캘린더', style: TextStyle(color: Colors.white)),
       ),
-      body: userId == null
-          ? const Center(child: CircularProgressIndicator())
-          : StreamBuilder<Map<DateTime, List<String>>>(
-        stream: _getEventsStream(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData || snapshot.data == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          _events = snapshot.data!;
-
-          return Column(
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 16.0), // 추가적인 패딩을 넣어 아래쪽 overflow 방지
+          child: Column(
             children: [
               TableCalendar(
                 locale: 'ko_KR',
@@ -220,11 +221,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 lastDay: DateTime.utc(2100, 12, 31),
                 focusedDay: _focusedDate,
                 selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
-                onDaySelected: (selectedDay, focusedDay) {
+                onDaySelected: (selectedDay, focusedDay) async {
                   setState(() {
                     _selectedDate = selectedDay;
                     _focusedDate = focusedDay;
                   });
+                  await _loadImagesForDate(selectedDay);
                 },
                 calendarStyle: const CalendarStyle(
                   selectedDecoration: BoxDecoration(
@@ -241,61 +243,136 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   titleCentered: true,
                 ),
               ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      _getEventsForDay(_selectedDate).join(', '),
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add),
-                    onPressed: () {
-                      final TextEditingController controller =
-                      TextEditingController();
-                      showDialog(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: const Text("일정 추가"),
-                            content: TextField(
-                              controller: controller,
-                              decoration: const InputDecoration(hintText: "일정 입력"),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: StreamBuilder<DocumentSnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('dates')
+                      .doc(userId)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (snapshot.hasError) {
+                      return const Center(child: Text("데이터를 불러오는 중 오류가 발생했습니다."));
+                    }
+
+                    final events = snapshot.data?.data() != null
+                        ? Map<String, dynamic>.from(snapshot.data!.data()! as Map<String, dynamic>)['events'] ?? {}
+                        : {};
+
+                    final dateKey = DateFormat('yyyy-MM-dd').format(_selectedDate);
+                    final List<String> eventsForSelectedDay = events[dateKey] != null
+                        ? List<String>.from(events[dateKey])
+                        : [];
+
+                    return Column(
+                      children: [
+                        Row(
+                          children: [
+                            if (eventsForSelectedDay.isNotEmpty)
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: eventsForSelectedDay
+                                        .map((event) => Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                      child: Text(
+                                        event,
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                    ))
+                                        .toList(),
+                                  ),
+                                ),
+                              )
+                            else
+                              const Expanded(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 8.0),
+                                  child: Text(
+                                    "일정이 존재하지 않습니다.",
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                              ),
+                            IconButton(
+                              icon: const Icon(Icons.add, color: Colors.blue),
+                              onPressed: () {
+                                final TextEditingController controller = TextEditingController();
+                                showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return AlertDialog(
+                                      title: const Text("일정 추가"),
+                                      content: TextField(
+                                        controller: controller,
+                                        decoration: const InputDecoration(hintText: "일정 입력"),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context),
+                                          child: const Text("취소"),
+                                        ),
+                                        TextButton(
+                                          onPressed: () async {
+                                            if (controller.text.isNotEmpty) {
+                                              await _addEventToFirestore(controller.text);
+                                              Navigator.pop(context);
+                                            }
+                                          },
+                                          child: const Text("추가"),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
                             ),
-                            actions: [
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.pop(context), // 취소 버튼
-                                child: const Text("취소"),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  _addEventToFirestore(controller.text);
-                                  Navigator.pop(context);
-                                },
-                                child: const Text("추가"),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.edit), // 수정 버튼 추가
-                    onPressed: () {
-                      final currentEvents = _getEventsForDay(_selectedDate);
-                      _showEditEventsDialog(List.from(currentEvents));
-                    },
-                  ),
-                ],
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.orange),
+                              onPressed: () {
+                                _showEditEventsDialog(List.from(eventsForSelectedDay));
+                              },
+                            ),
+                          ],
+                        ),
+                        SizedBox(
+                          height: 300,
+                          child: isLoadingImages
+                              ? const Center(child: CircularProgressIndicator())
+                              : imageUrls.isEmpty
+                              ? const Center(child: Text("해당 날짜에 저장된 이미지가 없습니다."))
+                              : GridView.builder(
+                            padding: const EdgeInsets.all(8.0),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 8.0,
+                              mainAxisSpacing: 8.0,
+                            ),
+                            itemCount: imageUrls.length,
+                            itemBuilder: (context, index) {
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(8.0),
+                                child: Image.network(
+                                  imageUrls[index],
+                                  fit: BoxFit.cover,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ],
-          );
-        },
+          ),
+        ),
       ),
     );
   }
