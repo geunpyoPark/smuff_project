@@ -90,6 +90,9 @@ flutter:
     - assets/img/bird.jpg
     - assets/img/luda.jpg
     - assets/img/123.jpeg
+    - assets/img/login1.jpg
+    - assets/img/login2.jpg
+    - assets/img/login3.jpg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

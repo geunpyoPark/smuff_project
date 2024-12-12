@@ -12,30 +12,25 @@ class Login_Screen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<Login_Screen> {
-  final PageController _pageController = PageController();
-  Timer? _timer; // 타이머 변수
-  int _currentPage = 0;
+  final PageController _pageController = PageController(initialPage: 1000);
+  Timer? _timer;
+  int _currentPage = 1000;
+
   final List<String> _backgroundImages = [
-    'assets/img/bird.jpg', // 배경 이미지 1
-    'assets/img/luda.jpg', // 배경 이미지 2
-    'assets/img/123.jpeg',
+    'assets/img/login1.jpg',
+    'assets/img/login2.jpg',
+    'assets/img/login3.jpg',
   ];
 
   @override
   void initState() {
     super.initState();
-    _startAutoSlide(); // 자동 슬라이드 시작
+    _startAutoSlide();
   }
 
   void _startAutoSlide() {
-    _timer = Timer.periodic(Duration(seconds: 3), (timer) {
-      // 현재 페이지를 증가시키고, 마지막 이미지를 넘으면 첫 번째 이미지로 돌아가도록 처리
-      if (_currentPage < _backgroundImages.length - 1) {
-        _currentPage++;
-      } else {
-        _currentPage = 0; // 마지막 이미지에서 첫 번째 이미지로 돌아가기
-      }
-      // 페이지 전환 애니메이션
+    _timer = Timer.periodic(Duration(seconds: 2), (timer) {
+      _currentPage++;
       _pageController.animateToPage(
         _currentPage,
         duration: Duration(milliseconds: 500),
@@ -46,20 +41,16 @@ class _LoginScreenState extends State<Login_Screen> {
 
   @override
   void dispose() {
-    _timer?.cancel(); // 타이머 해제
-    _pageController.dispose(); // 페이지 컨트롤러 해제
+    _timer?.cancel();
+    _pageController.dispose();
     super.dispose();
   }
 
-  // Firestore에 사용자 데이터를 저장하는 함수
   Future<void> saveUserData(String mid, String mname, String email) async {
     final docRef = FirebaseFirestore.instance.collection('users').doc(mid);
 
-    // Firestore에서 사용자 데이터 확인
     final docSnapshot = await docRef.get();
-
     if (!docSnapshot.exists) {
-      // 데이터가 존재하지 않는 경우에만 저장
       await docRef.set({
         'mname': mname,
         'email': email,
@@ -71,7 +62,6 @@ class _LoginScreenState extends State<Login_Screen> {
     }
   }
 
-  // 구글 로그인
   Future<void> onGoogleLoginPress(BuildContext context) async {
     GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
     try {
@@ -85,14 +75,12 @@ class _LoginScreenState extends State<Login_Screen> {
       UserCredential userCredential =
       await FirebaseAuth.instance.signInWithCredential(credential);
 
-      // Firestore에 사용자 데이터 저장
       await saveUserData(
         userCredential.user!.uid,
         userCredential.user!.displayName ?? '사용자 이름',
         userCredential.user!.email ?? 'unknown@example.com',
       );
 
-      // 로그인 성공 시 화면 이동
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => Home_Screen()),
       );
@@ -103,7 +91,6 @@ class _LoginScreenState extends State<Login_Screen> {
     }
   }
 
-  // 페이스북 로그인
   Future<void> onFacebookLoginPress(BuildContext context) async {
     try {
       final LoginResult result = await FacebookAuth.instance.login(permissions: ['email']);
@@ -119,7 +106,6 @@ class _LoginScreenState extends State<Login_Screen> {
         String mname = userData['name'] ?? '사용자 이름';
         String email = userData['email'] ?? 'unknown@example.com';
 
-        // Firestore에 사용자 데이터 저장
         await saveUserData(
           userCredential.user!.uid,
           mname,
@@ -144,29 +130,25 @@ class _LoginScreenState extends State<Login_Screen> {
     return Scaffold(
       body: Stack(
         children: [
-          // 배경 이미지 슬라이드
           PageView.builder(
             controller: _pageController,
-            itemCount: _backgroundImages.length,
             itemBuilder: (context, index) {
+              final imageIndex = index % _backgroundImages.length;
               return Image.asset(
-                _backgroundImages[index],
+                _backgroundImages[imageIndex],
                 fit: BoxFit.cover,
                 width: double.infinity,
                 height: double.infinity,
               );
             },
           ),
-
-          // 로그인 UI
           Center(
             child: SingleChildScrollView(
               padding: EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(height: 500,),
-                  // Google Login Button
+                  SizedBox(height: 550),
                   Column(
                     children: [
                       SizedBox(

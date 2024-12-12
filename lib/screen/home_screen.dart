@@ -19,6 +19,12 @@ class Home_Screen extends StatefulWidget {
 class _HomeScreenState extends State<Home_Screen> {
   late Future<UserModel?> _userDataFuture;
 
+  void refreshUserData() {
+    setState(() {
+      _userDataFuture = fetchUserData(); // Future를 새로 호출하여 데이터를 다시 가져옴
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -42,7 +48,7 @@ class _HomeScreenState extends State<Home_Screen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Color.fromRGBO(236, 95, 95, 1.0),
         elevation: 0,
         leading: SizedBox(),
       ),
@@ -140,7 +146,7 @@ class _HomeScreenState extends State<Home_Screen> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => CalendarScreen()),
+                            MaterialPageRoute(builder: (context) => Calendar_Screen(partnerUid: userData.yid)),
                           );
                         },
                         child: Column(
@@ -195,7 +201,11 @@ class _HomeScreenState extends State<Home_Screen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(builder: (context) => Settings_Screen()),
-                          );
+                          ).then((result) {
+                            if (result == true) {
+                              refreshUserData(); // Settings_Screen에서 변경 후 돌아오면 데이터 새로고침
+                            }
+                          });
                         },
                         child: Column(
                           children: [

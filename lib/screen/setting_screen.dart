@@ -97,12 +97,36 @@ class _Settings_ScreenState extends State<Settings_Screen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     try {
-      final docRef =
-          FirebaseFirestore.instance.collection('users').doc(user.uid);
-      await docRef.update({
+      final userDoc =
+      FirebaseFirestore.instance.collection('users').doc(user.uid);
+
+      // 현재 사용자의 문서 가져오기
+      final userSnapshot = await userDoc.get();
+      if (!userSnapshot.exists) return;
+
+      // 상대방의 yid 가져오기
+      final yid = userSnapshot.data()?['yid'] as String?;
+      if (yid == null || yid.isEmpty) {
+        print('상대방의 yid가 없습니다.');
+        return;
+      }
+
+      // 현재 사용자의 날짜 업데이트
+      await userDoc.update({
         'firstday': Timestamp.fromDate(selectedDate.toUtc()),
         'dday': dday,
       });
+
+      // 상대방 문서 가져오기
+      final yidDoc =
+      FirebaseFirestore.instance.collection('users').doc(yid);
+
+      // 상대방의 날짜 업데이트
+      await yidDoc.update({
+        'firstday': Timestamp.fromDate(selectedDate.toUtc()),
+        'dday': dday,
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('날짜가 저장되었습니다.')),
       );
@@ -110,6 +134,7 @@ class _Settings_ScreenState extends State<Settings_Screen> {
       print('오류 발생: $e');
     }
   }
+
   //파이어베이스에서 이미지 선택하기
   void _pickImage() async {
     final currentUser = FirebaseAuth.instance.currentUser; // Rename variable
@@ -187,7 +212,7 @@ class _Settings_ScreenState extends State<Settings_Screen> {
         // 내 데이터베이스에 연결 정보 저장
         await FirebaseFirestore.instance.collection('users').doc(myUid).update({
           'connections': FieldValue.arrayUnion([
-            {'uid': otherUid, 'name': otherUserName}
+            {'yid': otherUid, 'yname': otherUserName}
           ]),
           'yid': otherUid, // 상대방 UID 저장
           'yname': otherUserName // 상대방 이름 저장
@@ -222,6 +247,25 @@ class _Settings_ScreenState extends State<Settings_Screen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFEC5F5F),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context, true); // 뒤로가기 시 true 반환
+          },
+        ),
+        title: const Text(
+          'Setting',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+
+      ),
       backgroundColor: Colors.white,
       body: FutureBuilder<UserModel?>(
         future: _userDataFuture,
@@ -247,24 +291,6 @@ class _Settings_ScreenState extends State<Settings_Screen> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     SizedBox(height: 20),
-                    SizedBox(
-                      height: 30  ,
-                      child: Row(
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.home, color: Colors.black),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) => Home_Screen()),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 20),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start, // 왼쪽 정렬
                       children: [
@@ -273,23 +299,26 @@ class _Settings_ScreenState extends State<Settings_Screen> {
                           child: Text(
                             '앱 설정',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 17,
                               fontWeight: FontWeight.bold,
-                                color: Color.fromRGBO(236, 95, 95, 1.0) , // 완전 불투명한 빨간색
+                                color: Color.fromRGBO(236, 95, 95, 2.0) , // 완전 불투명한 빨간색
 
                             ),
                           ),
                         ),
-                        Divider(
-                          color: Color.fromRGBO(236, 95, 95, 1.0),
-                        ), // 구분선
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16), // 좌우 패딩 20
+                          child: Divider(
+                            color: Color.fromRGBO(236, 95, 95, 1.0),
+                          ), // 구분선
+                        ),
                       ],
                     ),
                     SizedBox(height: 20),
 
                     // 배경 사진 선택 버튼
                     SizedBox(
-                      width: 300,
+                      width: 380,
                       height: 50,
                       child: OutlinedButton(
                         onPressed: _pickImage,
@@ -305,7 +334,7 @@ class _Settings_ScreenState extends State<Settings_Screen> {
                     SizedBox(height: 20,),
                     // 날짜 설정 버튼
                     SizedBox(
-                      width: 300,
+                      width: 380,
                       height: 50,
                       child: OutlinedButton(
                         onPressed: _selectDate,
@@ -335,15 +364,18 @@ class _Settings_ScreenState extends State<Settings_Screen> {
                             ),
                           ),
                         ),
-                        Divider(
-                          color: Color.fromRGBO(236, 95, 95, 1.0),
-                        ), // 구분선
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16), // 좌우 패딩 20
+                          child: Divider(
+                            color: Color.fromRGBO(236, 95, 95, 1.0),
+                          ), // 구분선
+                        ),
                       ],
                     ),
                     SizedBox(height: 20),
                     // UID 복사 버튼
                     SizedBox(
-                      width: 300,
+                      width: 380,
                       height: 50,
                       child: OutlinedButton(
                         onPressed: () {
@@ -359,7 +391,7 @@ class _Settings_ScreenState extends State<Settings_Screen> {
                           children: [
                             Text(
                               '$_myUid',
-                              style: TextStyle(fontSize: 16,
+                              style: TextStyle(fontSize: 15,
                                 color: Colors.black),
                             ),
                           ],
@@ -374,7 +406,7 @@ class _Settings_ScreenState extends State<Settings_Screen> {
                     SizedBox(height: 20,),
                     // 상대방 UID 입력
                     SizedBox(
-                      width: 300,
+                      width: 380,
                       height: 50,
                       child: OutlinedButton(
                         onPressed: () {
@@ -446,7 +478,7 @@ class _Settings_ScreenState extends State<Settings_Screen> {
 
                     // 로그아웃 버튼
                     SizedBox(
-                      width: 300,
+                      width: 380,
                       height: 50,
                       child: ElevatedButton(
                         onPressed: () async {

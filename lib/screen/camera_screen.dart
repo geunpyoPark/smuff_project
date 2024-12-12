@@ -4,64 +4,91 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart'; // 날짜 포맷을 위한 패키지
+import 'package:intl/intl.dart';
+import 'gallery_screen.dart';
 
 class Camera_Screen extends StatefulWidget {
   const Camera_Screen({Key? key}) : super(key: key);
 
   @override
-  State<Camera_Screen> createState() => _CameraScreenState();
+  State<Camera_Screen> createState() => _Camera_ScreenState();
 }
 
-class _CameraScreenState extends State<Camera_Screen> {
+class _Camera_ScreenState extends State<Camera_Screen> {
   late CameraController _cameraController;
   late Future<void> _initializeControllerFuture;
   final String _uid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown_user';
+  bool _isFlashing = false; // 화면 반짝임 상태 변수
+  String? _latestImageUrl; // 최신 이미지 URL 상태 변수
 
   @override
   void initState() {
     super.initState();
     _initializeCamera();
+    _fetchLatestImage(); // 최신 사진 로드
   }
 
   Future<void> _initializeCamera() async {
-    final cameras = await availableCameras();
-    final firstCamera = cameras.first;
+    try {
+      final cameras = await availableCameras();
+      final firstCamera = cameras.first;
 
-    _cameraController = CameraController(
-      firstCamera,
-      ResolutionPreset.high,
-    );
+      _cameraController = CameraController(
+        firstCamera,
+        ResolutionPreset.high,
+      );
 
-    _initializeControllerFuture = _cameraController.initialize();
-    setState(() {});
+      _initializeControllerFuture = _cameraController.initialize();
+      setState(() {});
+    } catch (e) {
+      print('Error initializing camera: $e');
+    }
+  }
+
+  Future<void> _fetchLatestImage() async {
+    try {
+      final storageRef = FirebaseStorage.instance.ref().child(_uid);
+      final ListResult result = await storageRef.listAll();
+
+      if (result.items.isNotEmpty) {
+        // 최신 파일 가져오기
+        final latestItem = result.items.last;
+        final downloadUrl = await latestItem.getDownloadURL();
+
+        setState(() {
+          _latestImageUrl = downloadUrl;
+        });
+      }
+    } catch (e) {
+      print('Error fetching latest image: $e');
+    }
   }
 
   Future<void> _takePicture() async {
     try {
-      // Ensure the camera is initialized
+      setState(() {
+        _isFlashing = true;
+      });
+
+      await Future.delayed(const Duration(milliseconds: 100));
+      setState(() {
+        _isFlashing = false;
+      });
+
       await _initializeControllerFuture;
 
-      // Format the current date and time
-      final String formattedDate =
-      DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-
-      // Get the directory to save the image temporarily
       final directory = await getApplicationDocumentsDirectory();
-      final path = '${directory.path}/$formattedDate.png';
+      final String formattedDate = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final path = '${directory.path}/$formattedDate.jpeg';
 
-      // Take the picture and save it to the path
       final image = await _cameraController.takePicture();
-
-      // Save the picture to the provided path
       final savedImage = await File(image.path).copy(path);
 
-      // Upload the image to Firebase Storage
       await _uploadToFirebase(savedImage, formattedDate);
 
-      // Show a success message
+      await _fetchLatestImage(); // 최신 사진 로드
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Picture saved to Firebase Storage!')),
+        const SnackBar(content: Text('Picture saved to Firebase Storage!')),
       );
     } catch (e) {
       print('Error taking picture: $e');
@@ -70,17 +97,12 @@ class _CameraScreenState extends State<Camera_Screen> {
 
   Future<void> _uploadToFirebase(File image, String fileName) async {
     try {
-      // Create a reference to Firebase Storage
       final storageRef = FirebaseStorage.instance.ref();
-
-      // Use the UID as the folder name
       final userFolderRef = storageRef.child('$_uid');
-      final imageRef = userFolderRef.child('$fileName.png'); // 파일 이름 지정
+      final imageRef = userFolderRef.child('$fileName.jpeg');
 
-      // Upload the file
       await imageRef.putFile(image);
 
-      // Get the download URL
       final downloadUrl = await imageRef.getDownloadURL();
       print('Image uploaded successfully! Download URL: $downloadUrl');
     } catch (e) {
@@ -98,31 +120,112 @@ class _CameraScreenState extends State<Camera_Screen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Camera'),
+        backgroundColor: const Color(0xFFEC5F5F),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: const Text(
+          'Camera',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
       ),
-      body: FutureBuilder<void>(
-        future: _initializeControllerFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            return Stack(
+      body: Stack(
+        children: [
+          FutureBuilder<void>(
+            future: _initializeControllerFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.done) {
+                return SizedBox.expand(
+                  child: CameraPreview(_cameraController),
+                );
+              } else {
+                return const Center(child: CircularProgressIndicator());
+              }
+            },
+          ),
+          // 반짝임 효과
+          AnimatedOpacity(
+            opacity: _isFlashing ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 200),
+            child: Container(
+              color: Colors.white,
+            ),
+          ),
+          // 하단 버튼들
+          Positioned(
+            bottom: 40,
+            left: 175,
+            right: 20,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                CameraPreview(_cameraController),
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: FloatingActionButton(
-                      onPressed: _takePicture,
-                      child: const Icon(Icons.camera_alt),
+                GestureDetector(
+                  onTap: _takePicture,
+                  child: SizedBox(
+                    width: 70,
+                    height: 70,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.black26,
+                          width: 3,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () async {
+                    final latestImageUrl = await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => GalleryScreen()),
+                    );
+                    if (latestImageUrl != null && mounted) {
+                      setState(() {
+                        _latestImageUrl = latestImageUrl;
+                      });
+                    }
+                  },
+                  child: SizedBox(
+                    width: 50,
+                    height: 50,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        image: _latestImageUrl != null
+                            ? DecorationImage(
+                          image: NetworkImage(_latestImageUrl!),
+                          fit: BoxFit.cover,
+                        )
+                            : const DecorationImage(
+                          image: NetworkImage(
+                            'https://via.placeholder.com/50x50',
+                          ),
+                          fit: BoxFit.cover,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.black12,
+                          width: 1,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ],
-            );
-          } else {
-            return const Center(child: CircularProgressIndicator());
-          }
-        },
+            ),
+          ),
+        ],
       ),
     );
   }

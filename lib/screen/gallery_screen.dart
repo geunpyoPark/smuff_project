@@ -24,17 +24,21 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
     try {
       final userFolder = '${user.uid}/'; // 사용자 UID 기반 폴더 경로
-      final ListResult result = await FirebaseStorage.instance.ref(userFolder).listAll();
+      final ListResult result =
+      await FirebaseStorage.instance.ref(userFolder).listAll();
 
       // Firebase Storage에서 다운로드 URL 가져오기
-      final urls = await Future.wait(result.items.map((item) async {
+      final urls = await Future.wait(result.items
+          .map((item) async {
         try {
           return await item.getDownloadURL();
         } catch (e) {
           print('Error fetching URL: $e');
           return null;
         }
-      }).where((url) => url != null).toList());
+      })
+          .where((url) => url != null)
+          .toList());
 
       setState(() {
         imageUrls = urls.cast<String>(); // 가져온 URL 리스트를 저장
@@ -52,8 +56,23 @@ class _GalleryScreenState extends State<GalleryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Gallery'),
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFEC5F5F),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: const Text(
+          'Gallery',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
       ),
       body: isLoading
           ? Center(child: CircularProgressIndicator()) // 로딩 중
@@ -71,16 +90,23 @@ class _GalleryScreenState extends State<GalleryScreen> {
           itemBuilder: (context, index) {
             final imageUrl = imageUrls[index];
             return GestureDetector(
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => FullScreenSlider(
+                    builder: (context) => GalleryDetailScreen(
                       imageUrls: imageUrls,
                       initialIndex: index,
                     ),
                   ),
                 );
+
+                // 삭제된 이미지 URL 반영
+                if (result != null && result is String) {
+                  setState(() {
+                    imageUrls.remove(result);
+                  });
+                }
               },
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(8),
@@ -88,87 +114,14 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   imageUrl,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) =>
-                      Center(child: Icon(Icons.error, color: Colors.red)),
+                      Center(
+                          child:
+                          Icon(Icons.error, color: Colors.red)),
                 ),
               ),
             );
           },
         ),
-      ),
-    );
-  }
-}
-
-class FullScreenSlider extends StatefulWidget {
-  final List<String> imageUrls;
-  final int initialIndex;
-
-  const FullScreenSlider({
-    Key? key,
-    required this.imageUrls,
-    required this.initialIndex,
-  }) : super(key: key);
-
-  @override
-  _FullScreenSliderState createState() => _FullScreenSliderState();
-}
-
-class _FullScreenSliderState extends State<FullScreenSlider> {
-  late PageController _pageController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController(initialPage: widget.initialIndex);
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.pop(context); // 뒤로 가기 버튼을 눌렀을 때 이전 화면으로 돌아감
-          },
-        ),
-      ),
-      body: PageView.builder(
-        controller: _pageController,
-        itemCount: widget.imageUrls.length,
-        itemBuilder: (context, index) {
-          return Center(
-            child: Image.network(
-              widget.imageUrls[index],
-              fit: BoxFit.contain,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) {
-                  return child;
-                } else {
-                  return Center(
-                    child: CircularProgressIndicator(
-                      value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded /
-                          (loadingProgress.expectedTotalBytes ?? 1)
-                          : null,
-                    ),
-                  );
-                }
-              },
-              errorBuilder: (context, error, stackTrace) =>
-                  Center(child: Icon(Icons.error, color: Colors.red)),
-            ),
-          );
-        },
       ),
     );
   }
